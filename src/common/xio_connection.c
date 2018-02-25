@@ -1203,6 +1203,8 @@ int xio_send_response_error(struct xio_msg *msg, enum xio_status result)
 	msg->hints = 0;
 	msg->flags = 0;
 	msg->request = msg;
+	msg->out.data_tbl.nents = 0;
+	msg->out.header.iov_len = 0;
 	task	   = container_of(msg->request, struct xio_task, imsg);
 	task->status = result;
 
