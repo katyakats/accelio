@@ -269,17 +269,19 @@ static struct xio_mem_block *non_safe_new_block(struct xio_mem_slab *slab)
 static int xio_mem_slab_free(struct xio_mem_slab *slab)
 {
 	struct xio_mem_region *r, *tmp_r;
+	int ret_val = 0;
 
 	slab->free_blocks_list = NULL;
 
-#ifdef DEBUG_MEMPOOL_MT
-	if (slab->used_mb_nr)
+	if (slab->used_mb_nr) {
 		ERROR_LOG("buffers are still in use before free: " \
-			  "pool:%p - slab[%p]: " \
-			  "size:%zd, used:%d, alloced:%d, max_alloc:%d\n",
-			  slab->pool, slab, slab->mb_size, slab->used_mb_nr,
-			  slab->curr_mb_nr, slab->max_mb_nr);
-#endif
+              		  "pool:%p - slab[%p]: " \
+              		  "size:%zd, used:%d, alloced:%d, max_alloc:%d\n",
+		  	   slab->pool, slab, slab->mb_size, slab->used_mb_nr,
+			   slab->curr_mb_nr, slab->max_mb_nr);
+		ret_val = -1;
+		//the memory is released even if buffers are in use
+	}
 
 	if (slab->curr_mb_nr) {
 		list_for_each_entry_safe(r, tmp_r, &slab->mem_regions_list,
@@ -306,7 +308,7 @@ static int xio_mem_slab_free(struct xio_mem_slab *slab)
 		}
 	}
 
-	return 0;
+	return ret_val;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -445,18 +447,28 @@ static struct xio_mem_block *xio_mem_slab_resize(struct xio_mem_slab *slab,
 /*---------------------------------------------------------------------------*/
 /* xio_mempool_destroy							     */
 /*---------------------------------------------------------------------------*/
-void xio_mempool_destroy(struct xio_mempool *p)
+int xio_mempool_destroy(struct xio_mempool *p)
 {
 	unsigned int i;
+	int ret_val = 0;
 
-	if (!p)
-		return;
+	if (!p) {
+        ERROR_LOG("mempool is NULL\n");
+        xio_set_error(EINVAL);
+        return -1;
+    }
 
-	for (i = 0; i < p->slabs_nr; i++)
-		xio_mem_slab_free(&p->slab[i]);
+	for (i = 0; i < p->slabs_nr; i++) {
+		if (xio_mem_slab_free(&p->slab[i])) {
+			xio_set_error(EBUSY);
+			ret_val = -1;
+			//some buffers were in use, but the memory was released anyway
+		}
+	}
 
 	ufree(p->slab);
 	ufree(p);
+	return ret_val;
 }
 
 /*---------------------------------------------------------------------------*/

@@ -555,8 +555,10 @@ int xio_mempool_add_slab(struct xio_mempool *mpool,
  *
  * @param[in] mpool	  the memory pool
  *
+ * @return 0 on success, or -1 on error.  If an error occurs, call
+ *	    xio_errno function to get the failure reason.
  */
-void xio_mempool_destroy(struct xio_mempool *mpool);
+int xio_mempool_destroy(struct xio_mempool *mpool);
 
 /**
  * allocate memory buffer from memory pool. This method is thread safe
