@@ -3102,8 +3102,6 @@ int xio_on_fin_ack_send_comp(struct xio_connection *connection,
 		xio_ctx_del_delayed_work(connection->ctx,
 				&connection->ka.timer);
 		xio_ctx_del_delayed_work(connection->ctx,
-				&connection->fin_req_timeout_work);
-		xio_ctx_del_delayed_work(connection->ctx,
 					 &connection->fin_ack_timeout_work);
 
 		connection->close_reason = XIO_E_SESSION_DISCONNECTED;
