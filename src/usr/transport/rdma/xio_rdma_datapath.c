@@ -157,13 +157,20 @@ static int xio_post_send(struct xio_rdma_transport *rdma_hndl,
 	struct xio_task		*task = (struct xio_task *)
 				ptr_from_int64(xio_send->send_wr.wr_id);
 
+    if (!IS_APPLICATION_MSG(task->tlv_type))
+        DEBUG_LOG("%s - tlv_type:0x%x, session:%p, connection:%p, rdma_hndl:%p\n",
+                  __func__,
+                  task->tlv_type, task->session,
+                  task->connection, rdma_hndl);
+
+/*
 	if (!IS_KEEPALIVE(task->tlv_type) && !IS_NOP(task->tlv_type) &&
 	    !IS_APPLICATION_MSG(task->tlv_type))
 		DEBUG_LOG("%s - tlv_type:0x%x, session:%p, connection:%p, rdma_hndl:%p\n",
 			  __func__,
 			  task->tlv_type, task->session,
 			  task->connection, rdma_hndl);
-
+*/
 	/*
 	TRACE_LOG("num_sge:%d, len1:%d, len2:%d, send_flags:%d\n",
 		  xio_send->send_wr.num_sge,
@@ -278,12 +285,12 @@ static int xio_rdma_xmit(struct xio_rdma_transport *rdma_hndl)
 		window = min(window, rdma_hndl->sqe_avail);
 	}
 #endif
-	/*
-	TRACE_LOG("XMIT: tx_window:%d, peer_credits:%d, sqe_avail:%d\n",
+
+	DEBUG_LOG("XMIT: tx_window:%d, peer_credits:%d, sqe_avail:%d\n",
 		  tx_window,
 		  rdma_hndl->peer_credits,
 		  rdma_hndl->sqe_avail);
-	*/
+
 	if (window == 0) {
 		xio_set_error(EAGAIN);
 		return -1;
@@ -795,10 +802,14 @@ static int xio_rdma_idle_handler(struct xio_rdma_transport *rdma_hndl)
 	if (!rdma_hndl->sqe_avail)
 		return 0;
 
+    DEBUG_LOG("peer_credits:%d, credits:%d sim_peer_credits:%d\n",
+              rdma_hndl->peer_credits, rdma_hndl->credits,
+              rdma_hndl->sim_peer_credits);
+
 #ifndef XIO_SRQ_ENABLE
 	/* Can the peer receive messages? */
 	if (!rdma_hndl->peer_credits)
-		return 0;
+        return 0;
 #endif
 
 	/* If we have real messages to send there is no need for
@@ -818,7 +829,7 @@ static int xio_rdma_idle_handler(struct xio_rdma_transport *rdma_hndl)
 	if (!rdma_hndl->credits)
 		return 0;
 
-	TRACE_LOG("peer_credits:%d, credits:%d sim_peer_credits:%d\n",
+	DEBUG_LOG("peer_credits:%d, credits:%d sim_peer_credits:%d\n",
 		  rdma_hndl->peer_credits, rdma_hndl->credits,
 		  rdma_hndl->sim_peer_credits);
 
@@ -5113,6 +5124,8 @@ static int xio_rdma_on_recv_nop(struct xio_rdma_transport *rdma_hndl,
 	else
 		ERROR_LOG("ERROR: expected sn:%d, arrived sn:%d, rdma_hndl:%p\n",
 			  rdma_hndl->exp_sn, nop.sn, rdma_hndl);
+
+    DEBUG_LOG("recv nop, %p %d", rdma_hndl, rdma_hndl->peer_credits);
 
 	/* the rx task is returned back to pool */
 	xio_tasks_pool_put(task);
