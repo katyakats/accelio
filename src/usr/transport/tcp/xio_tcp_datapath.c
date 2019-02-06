@@ -56,61 +56,6 @@
 extern struct xio_tcp_options tcp_options;
 
 /*---------------------------------------------------------------------------*/
-/* xio_free_rdma_read_mem						     */
-/*---------------------------------------------------------------------------*/
-void xio_free_rdma_read_mem(struct xio_tcp_transport *tcp_hndl,
-			  struct xio_task *task)
-{
-	XIO_TO_TCP_TASK(task, tcp_task);
-
-	unsigned int		i;
-
-	if (task->is_assigned) {
-		if (task->unassign_data_in_buf)
-			task->unassign_data_in_buf(&task->imsg,
-						   task->unassign_user_context);
-		task->is_assigned = 0;
-		task->unassign_data_in_buf = NULL;
-		task->unassign_user_context = NULL;
-		clr_bits(XIO_MSG_HINT_ASSIGNED_DATA_IN_BUF, &task->imsg.hints);
-	} else {
-		for (i = 0; i < tcp_task->read_num_reg_mem; i++) {
-			xio_mempool_free(&tcp_task->read_reg_mem[i]);
-			tcp_task->read_reg_mem[i].priv = NULL;
-		}
-		tcp_task->read_num_reg_mem = 0;
-	}
-}
-
-/*---------------------------------------------------------------------------*/
-/* xio_free_tcp_task_mem						     */
-/*---------------------------------------------------------------------------*/
-int xio_free_tcp_task_mem(
-		struct xio_transport_base *trans_hndl,
-		struct xio_task *task)
-{
-	XIO_TO_TCP_TASK(task, tcp_task);
-	XIO_TO_TCP_HNDL(task, tcp_hndl);
-	unsigned int	i;
-
-	/* recycle TCP  buffers back to pool */
-
-	/* put buffers back to pool */
-	xio_free_rdma_read_mem(tcp_hndl, task);
-
-	for (i = 0; i < tcp_task->write_num_reg_mem; i++) {
-		if (tcp_task->write_reg_mem[i].priv) {
-			xio_mempool_free(&tcp_task->write_reg_mem[i]);
-			tcp_task->write_reg_mem[i].priv = NULL;
-		}
-	}
-	tcp_task->write_num_reg_mem = 0;
-
-	return 0;
-}
-
-
-/*---------------------------------------------------------------------------*/
 /* xio_tcp_send_work                                                         */
 /*---------------------------------------------------------------------------*/
 static int xio_tcp_send_work(int fd, void **buf, uint32_t *len, int block)
@@ -429,9 +374,6 @@ static int xio_tcp_on_setup_msg(struct xio_tcp_transport *tcp_hndl,
 	DEBUG_LOG("%s - tcp_hndl:%p, peer_tcp_hndl:%p\n",
 		  __func__,
 		  tcp_hndl, tcp_hndl->peer_tcp_hndl);
-
-	if (task->status)
-		xio_free_tcp_task_mem(&tcp_hndl->base, task);
 
 	xio_transport_notify_observer(&tcp_hndl->base,
 				      XIO_TRANSPORT_EVENT_NEW_MESSAGE,
@@ -1319,6 +1261,33 @@ handle_completions:
 	xio_context_disable_event(&tcp_hndl->flush_tx_event);
 
 	return retval < 0 ? retval : 0;
+}
+
+/*---------------------------------------------------------------------------*/
+/* xio_free_rdma_read_mem						     */
+/*---------------------------------------------------------------------------*/
+void xio_free_rdma_read_mem(struct xio_tcp_transport *tcp_hndl,
+			  struct xio_task *task)
+{
+	XIO_TO_TCP_TASK(task, tcp_task);
+
+	unsigned int		i;
+
+	if (task->is_assigned) {
+		if (task->unassign_data_in_buf)
+			task->unassign_data_in_buf(&task->imsg,
+						   task->unassign_user_context);
+		task->is_assigned = 0;
+		task->unassign_data_in_buf = NULL;
+		task->unassign_user_context = NULL;
+		clr_bits(XIO_MSG_HINT_ASSIGNED_DATA_IN_BUF, &task->imsg.hints);
+	} else {
+		for (i = 0; i < tcp_task->read_num_reg_mem; i++) {
+			xio_mempool_free(&tcp_task->read_reg_mem[i]);
+			tcp_task->read_reg_mem[i].priv = NULL;
+		}
+		tcp_task->read_num_reg_mem = 0;
+	}
 }
 
 /*---------------------------------------------------------------------------*/
@@ -2590,9 +2559,6 @@ static int xio_tcp_on_recv_req_data(struct xio_tcp_transport *tcp_hndl,
 
 	list_move_tail(&task->tasks_list_entry, &tcp_hndl->io_list);
 
-	if (task->status)
-		xio_free_tcp_task_mem(&tcp_hndl->base, task);
-
 	xio_transport_notify_observer(&tcp_hndl->base,
 				      XIO_TRANSPORT_EVENT_NEW_MESSAGE,
 				      &event_data);
@@ -2888,9 +2854,6 @@ partial_msg:
 	event_data.msg.task	= task;
 
 	list_move_tail(&task->tasks_list_entry, &tcp_hndl->io_list);
-
-	if (task->status)
-		xio_free_tcp_task_mem(&tcp_hndl->base, task);
 
 	/* notify the upper layer of received message */
 	xio_transport_notify_observer(&tcp_hndl->base,

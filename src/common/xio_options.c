@@ -371,15 +371,6 @@ static int xio_general_get_opt(void  *xio_obj, int optname,
 		*optlen = sizeof(int);
 		*((int *)optval) = g_options.transport_close_timeout;
 		return 0;
-	case XIO_OPTNAME_MEM_ALLOCATOR:
-		if (*optlen == sizeof(struct xio_mem_allocator)) {
-			xio_get_mem_allocator((struct xio_mem_allocator *)optval);
-			return 0;
-		} else {
-			xio_set_error(EINVAL);
-			return -1;
-		}
-		break;
 	default:
 		break;
 	}

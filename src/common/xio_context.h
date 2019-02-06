@@ -136,8 +136,7 @@ struct xio_context {
 	pthread_mutex_t                 dbg_thread_mutex;
 	void                            *buffer[BACKTRACE_BUFFER_SIZE];
 #endif
-	void				*prv_evt;
-	void				(*ack_evt)(void *prv_evt);
+
 };
 
 /*---------------------------------------------------------------------------*/
@@ -336,23 +335,6 @@ void *xio_context_vzalloc(struct xio_context *ctx, unsigned long size);
 void xio_context_vfree(struct xio_context *ctx, const void *addr);
 char *xio_context_kstrdup(struct xio_context *ctx, const char *s, gfp_t gfp);
 char *xio_context_kstrndup(struct xio_context *ctx,const char *s, size_t len, gfp_t gfp);
-
-static inline void xio_context_set_prv_event(struct xio_context *ctx, void *prv_evt, void (*ack_evt)(void *prv_evt))
-{
-	if (ctx->prv_evt)
-		abort();
-	ctx->prv_evt = prv_evt;
-	ctx->ack_evt = ack_evt;
-}
-
-static inline void xio_context_ack_event(struct xio_context *ctx)
-{
-	if (ctx->prv_evt && ctx->ack_evt) {
-		ctx->ack_evt(ctx->prv_evt);	
-	}
-	ctx->prv_evt = NULL;
-	ctx->ack_evt = NULL;
-}
 
 #endif /*XIO_CONTEXT_H */
 

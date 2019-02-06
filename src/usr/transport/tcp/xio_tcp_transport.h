@@ -407,7 +407,7 @@ void xio_tcp_disconnect_helper(void *xio_tcp_hndl);
 
 int xio_tcp_xmit(struct xio_tcp_transport *tcp_hndl);
 
-int xio_free_tcp_task_mem(struct xio_transport_base *trans_hndl,
+void xio_free_rdma_read_mem(struct xio_tcp_transport *tcp_hndl,
 			  struct xio_task *task);
 
 #endif /* XIO_TCP_TRANSPORT_H_ */

@@ -56,6 +56,7 @@
 #include "xio_nexus.h"
 #include "xio_session.h"
 #include "xio_connection.h"
+#include "../../include/libxio.h"
 #include <xio_env_adv.h>
 
 #define MSG_POOL_SZ			1024
@@ -1122,7 +1123,8 @@ int xio_send_request(struct xio_connection *connection,
 #endif
 
 		pmsg->sn = xio_session_get_sn(connection->session);
-		pmsg->type = XIO_MSG_TYPE_REQ;
+        DEBUG_LOG("sending request %lu, %p", pmsg->sn, connection);
+        pmsg->type = XIO_MSG_TYPE_REQ;
 
 		if (connection->enable_flow_control) {
 			connection->tx_queued_msgs++;
@@ -1224,13 +1226,12 @@ int xio_send_response_error(struct xio_msg *msg, enum xio_status result)
 	msg->hints = 0;
 	msg->flags = XIO_MSG_FLAG_IMM_SEND_COMP;
 	msg->request = msg;
-	msg->in.data_tbl.nents = 0;
-	msg->in.header.iov_len = 0;
 	msg->out.data_tbl.nents = 0;
 	msg->out.header.iov_len = 0;
 	/* same task that use to request -now used for response too */
 	task	   = container_of(msg->request, struct xio_task, imsg);
 	task->status = result;
+	xio_task_addref(task);
 	xio_send_single_rsp(msg, task);
 	return 0;
 }

@@ -2170,12 +2170,20 @@ static int xio_tcp_task_pre_put(
 {
 	XIO_TO_TCP_TASK(task, tcp_task);
 	XIO_TO_TCP_HNDL(task, tcp_hndl);
+	unsigned int	i;
 
 	/* recycle TCP  buffers back to pool */
 
 	/* put buffers back to pool */
-	xio_free_tcp_task_mem(trans_hndl, task);
+	xio_free_rdma_read_mem(tcp_hndl, task);
 
+	for (i = 0; i < tcp_task->write_num_reg_mem; i++) {
+		if (tcp_task->write_reg_mem[i].priv) {
+			xio_mempool_free(&tcp_task->write_reg_mem[i]);
+			tcp_task->write_reg_mem[i].priv = NULL;
+		}
+	}
+	tcp_task->write_num_reg_mem	= 0;
 	tcp_task->req_in_num_sge	= 0;
 	tcp_task->req_out_num_sge	= 0;
 	tcp_task->rsp_out_num_sge	= 0;

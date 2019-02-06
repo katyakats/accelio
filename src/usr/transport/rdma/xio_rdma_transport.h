@@ -462,7 +462,6 @@ struct xio_rdma_transport {
 	struct xio_transport		*transport;
 	struct xio_cm_channel		*cm_channel;
 	struct rdma_cm_id		*cm_id;
-	struct rdma_cm_id		*prev_cm_id;
 	struct xio_tasks_pool_cls	initial_pool_cls;
 	struct xio_tasks_pool_cls	primary_pool_cls;
 
@@ -599,7 +598,7 @@ int xio_rkey_table_create(struct xio_device *old, struct xio_device *_new,
 
 void xio_rdma_poll_completions(struct xio_cq *tcq, int timeout_us);
 
-int xio_free_rdma_task_mem(struct xio_transport_base *trans_hndl,
-			   struct xio_task *task);
+void xio_free_rdma_rd_mem(struct xio_rdma_transport *rdma_hndl,
+			  struct xio_task *task);
 
 #endif  /* XIO_RDMA_TRANSPORT_H */

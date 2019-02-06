@@ -752,7 +752,8 @@ static int xio_on_req_recv(struct xio_connection *connection,
 				}
 			}
 			msg->in.crc = 0;
-			connection->ses_ops.on_msg(
+            DEBUG_LOG("got req for connection:%p, task:%p", connection, task);
+            connection->ses_ops.on_msg(
 					connection->session, msg,
 					task->last_in_rxq,
 					connection->cb_user_context);
